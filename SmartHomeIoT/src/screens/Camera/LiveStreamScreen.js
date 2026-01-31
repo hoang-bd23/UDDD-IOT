@@ -11,18 +11,18 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
-    useColorScheme,
     Dimensions,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useDevices } from '../../context/DeviceContext';
+import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, typography, getThemeColors, globalStyles } from '../../styles';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function LiveStreamScreen() {
-    const isDarkMode = useColorScheme() === 'dark';
+    const { isDarkMode } = useTheme();
     const theme = getThemeColors(isDarkMode);
 
     const { cameraUrl, connectionStatus } = useDevices();

@@ -9,14 +9,14 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
-    useColorScheme,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useDevices } from '../../context/DeviceContext';
+import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, typography, getThemeColors, globalStyles } from '../../styles';
 
 export default function CameraScreen({ navigation }) {
-    const isDarkMode = useColorScheme() === 'dark';
+    const { isDarkMode } = useTheme();
     const theme = getThemeColors(isDarkMode);
 
     const { connectionStatus, raspberryPiUrl } = useDevices();

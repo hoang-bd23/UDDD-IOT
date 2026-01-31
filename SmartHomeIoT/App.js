@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { StatusBar, useColorScheme, LogBox } from 'react-native';
+import { StatusBar, LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -13,6 +13,7 @@ import { DeviceProvider } from './src/context/DeviceContext';
 import { RoomProvider } from './src/context/RoomContext';
 import { ScheduleProvider } from './src/context/ScheduleContext';
 import { NotificationProvider } from './src/context/NotificationContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { firebaseMessaging } from './src/services/firebase';
 import AppNavigator from './src/navigation/AppNavigator';
 
@@ -23,8 +24,9 @@ LogBox.ignoreLogs([
   'Toggle attempt',
 ]);
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+// Inner app component that uses theme
+function AppContent() {
+  const { isDarkMode } = useTheme();
 
   // Setup foreground message handler at app root
   useEffect(() => {
@@ -36,23 +38,31 @@ function App() {
   }, []);
 
   return (
+    <SafeAreaProvider>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <AuthProvider>
+        <NotificationProvider>
+          <DeviceProvider>
+            <RoomProvider>
+              <ScheduleProvider>
+                <NavigationContainer>
+                  <AppNavigator />
+                </NavigationContainer>
+              </ScheduleProvider>
+            </RoomProvider>
+          </DeviceProvider>
+        </NotificationProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
+  );
+}
+
+function App() {
+  return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        <AuthProvider>
-          <NotificationProvider>
-            <DeviceProvider>
-              <RoomProvider>
-                <ScheduleProvider>
-                  <NavigationContainer>
-                    <AppNavigator />
-                  </NavigationContainer>
-                </ScheduleProvider>
-              </RoomProvider>
-            </DeviceProvider>
-          </NotificationProvider>
-        </AuthProvider>
-      </SafeAreaProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

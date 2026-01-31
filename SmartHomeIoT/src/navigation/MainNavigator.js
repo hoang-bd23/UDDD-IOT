@@ -12,8 +12,9 @@ import { colors } from '../styles';
 // Screens
 import HomeScreen from '../screens/Home/HomeScreen';
 import DevicesScreen from '../screens/Devices/DevicesScreen';
-import RoomsScreen from '../screens/Rooms/RoomsScreen';
 import ScheduleScreen from '../screens/Schedule/ScheduleScreen';
+import AddScheduleScreen from '../screens/Schedule/AddScheduleScreen';
+import HistoryScreen from '../screens/History/HistoryScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
 import CameraScreen from '../screens/Camera/CameraScreen';
 import LiveStreamScreen from '../screens/Camera/LiveStreamScreen';
@@ -43,6 +44,33 @@ function CameraStack() {
     );
 }
 
+// Schedule Stack Navigator
+function ScheduleStack() {
+    return (
+        <Stack.Navigator>
+            <Stack.Screen
+                name="ScheduleMain"
+                component={ScheduleScreen}
+                options={{
+                    title: 'Lịch hẹn',
+                    headerStyle: { backgroundColor: colors.primary },
+                    headerTintColor: colors.white,
+                    headerTitleStyle: { fontWeight: '600' },
+                }}
+            />
+            <Stack.Screen
+                name="AddSchedule"
+                component={AddScheduleScreen}
+                options={({ route }) => ({
+                    title: route.params?.schedule ? 'Sửa lịch hẹn' : 'Thêm lịch hẹn',
+                    headerStyle: { backgroundColor: colors.primary },
+                    headerTintColor: colors.white,
+                })}
+            />
+        </Stack.Navigator>
+    );
+}
+
 export default function MainNavigator() {
     return (
         <Tab.Navigator
@@ -57,10 +85,10 @@ export default function MainNavigator() {
                         case 'Devices':
                             iconName = focused ? 'bulb' : 'bulb-outline';
                             break;
-                        case 'Rooms':
-                            iconName = focused ? 'grid' : 'grid-outline';
-                            break;
                         case 'Schedule':
+                            iconName = focused ? 'alarm' : 'alarm-outline';
+                            break;
+                        case 'History':
                             iconName = focused ? 'time' : 'time-outline';
                             break;
                         case 'Camera':
@@ -105,14 +133,17 @@ export default function MainNavigator() {
                 options={{ title: 'Thiết bị' }}
             />
             <Tab.Screen
-                name="Rooms"
-                component={RoomsScreen}
-                options={{ title: 'Phòng' }}
+                name="Schedule"
+                component={ScheduleStack}
+                options={{
+                    title: 'Lịch hẹn',
+                    headerShown: false,
+                }}
             />
             <Tab.Screen
-                name="Schedule"
-                component={ScheduleScreen}
-                options={{ title: 'Lịch hẹn' }}
+                name="History"
+                component={HistoryScreen}
+                options={{ title: 'Lịch sử' }}
             />
             <Tab.Screen
                 name="Camera"

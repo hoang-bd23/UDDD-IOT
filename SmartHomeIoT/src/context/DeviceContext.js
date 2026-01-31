@@ -3,9 +3,11 @@
  * Manages IoT device state with Firebase sync
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { Vibration } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { firebaseDatabase } from '../services/firebase';
+import { localNotifications } from '../services/localNotifications';
 import { useAuth } from './AuthContext';
 
 const DeviceContext = createContext(null);
@@ -36,6 +38,27 @@ export function DeviceProvider({ children }) {
     const [raspberryPiUrl, setRaspberryPiUrl] = useState('http://10.0.2.2:8080');
     const [cameraUrl, setCameraUrl] = useState('http://10.0.2.2:8081');
     const [isToggling, setIsToggling] = useState(false);
+
+    // Track previous connection status for notifications
+    const prevConnectionStatus = useRef(connectionStatus);
+
+    // Initialize notification channels
+    useEffect(() => {
+        localNotifications.initialize();
+    }, []);
+
+    // Show push notification when connection status changes
+    useEffect(() => {
+        if (prevConnectionStatus.current === 'connected' && connectionStatus === 'disconnected') {
+            // Connection was lost
+            Vibration.vibrate(500);
+            localNotifications.showConnectionLost();
+        } else if (prevConnectionStatus.current === 'disconnected' && connectionStatus === 'connected') {
+            // Connection restored
+            localNotifications.showConnectionRestored();
+        }
+        prevConnectionStatus.current = connectionStatus;
+    }, [connectionStatus]);
 
     // Load server URL from storage
     useEffect(() => {
@@ -164,7 +187,7 @@ export function DeviceProvider({ children }) {
                 setDevices(updatedDevices);
                 saveDevicesLocal(updatedDevices);
 
-                // Sync to Firebase if authenticated (non-blocking)
+                // Sync to Firebase if authenticated
                 if (isAuthenticated) {
                     firebaseDatabase.updateDeviceState(deviceId, newState).catch(() => { });
                 }

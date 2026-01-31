@@ -10,15 +10,15 @@ import {
     StyleSheet,
     FlatList,
     TouchableOpacity,
-    useColorScheme,
     Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useDevices } from '../../context/DeviceContext';
+import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, typography, getThemeColors, globalStyles } from '../../styles';
 
 export default function DevicesScreen() {
-    const isDarkMode = useColorScheme() === 'dark';
+    const { isDarkMode } = useTheme();
     const theme = getThemeColors(isDarkMode);
 
     const { devices, toggleDevice, connectionStatus } = useDevices();

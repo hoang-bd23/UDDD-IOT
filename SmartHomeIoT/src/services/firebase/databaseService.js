@@ -75,8 +75,10 @@ export const firebaseDatabase = {
      */
     updateDeviceState: async (deviceId, isOn) => {
         try {
+            const uid = getUid();
+
             await database()
-                .ref(`${paths.devices}/${getUid()}/${deviceId}`)
+                .ref(`${paths.devices}/${uid}/${deviceId}`)
                 .update({
                     isOn,
                     lastUpdated: database.ServerValue.TIMESTAMP,
@@ -284,7 +286,48 @@ export const firebaseDatabase = {
     },
 
     /**
-     * Save schedule
+     * Add new schedule (with auto-generated ID)
+     */
+    addSchedule: async (schedule) => {
+        try {
+            const newRef = database()
+                .ref(`${paths.schedules}/${getUid()}`)
+                .push();
+
+            await newRef.set({
+                ...schedule,
+                createdAt: database.ServerValue.TIMESTAMP,
+                updatedAt: database.ServerValue.TIMESTAMP,
+            });
+
+            return { success: true, id: newRef.key };
+        } catch (error) {
+            console.error('Error adding schedule:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    /**
+     * Update existing schedule
+     */
+    updateSchedule: async (scheduleId, updates) => {
+        try {
+            await database()
+                .ref(`${paths.schedules}/${getUid()}/${scheduleId}`)
+                .update({
+                    ...updates,
+                    updatedAt: database.ServerValue.TIMESTAMP,
+                });
+
+            return { success: true };
+        } catch (error) {
+            console.error('Error updating schedule:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    /**
+     * Save schedule (for backward compatibility)
      */
     saveSchedule: async (schedule) => {
         try {

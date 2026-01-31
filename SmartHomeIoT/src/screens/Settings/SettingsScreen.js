@@ -13,15 +13,15 @@ import {
     TextInput,
     Switch,
     Alert,
-    useColorScheme,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../context/AuthContext';
 import { useDevices } from '../../context/DeviceContext';
+import { useTheme, THEME_MODES } from '../../context/ThemeContext';
 import { colors, spacing, typography, getThemeColors, globalStyles } from '../../styles';
 
 export default function SettingsScreen() {
-    const isDarkMode = useColorScheme() === 'dark';
+    const { isDarkMode, themeMode, setTheme } = useTheme();
     const theme = getThemeColors(isDarkMode);
 
     const { user, logout } = useAuth();
@@ -245,6 +245,76 @@ export default function SettingsScreen() {
                 }
             />
 
+            {/* Theme Settings */}
+            <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+                GIAO DIỆN
+            </Text>
+
+            <View style={[styles.themeCard, { backgroundColor: theme.surface }]}>
+                <TouchableOpacity
+                    style={[
+                        styles.themeOption,
+                        themeMode === THEME_MODES.SYSTEM && styles.themeOptionActive,
+                        themeMode === THEME_MODES.SYSTEM && { borderColor: colors.primary }
+                    ]}
+                    onPress={() => setTheme(THEME_MODES.SYSTEM)}
+                >
+                    <Icon
+                        name="phone-portrait-outline"
+                        size={24}
+                        color={themeMode === THEME_MODES.SYSTEM ? colors.primary : theme.textMuted}
+                    />
+                    <Text style={[
+                        styles.themeOptionText,
+                        { color: themeMode === THEME_MODES.SYSTEM ? colors.primary : theme.text }
+                    ]}>
+                        Hệ thống
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[
+                        styles.themeOption,
+                        themeMode === THEME_MODES.LIGHT && styles.themeOptionActive,
+                        themeMode === THEME_MODES.LIGHT && { borderColor: colors.primary }
+                    ]}
+                    onPress={() => setTheme(THEME_MODES.LIGHT)}
+                >
+                    <Icon
+                        name="sunny-outline"
+                        size={24}
+                        color={themeMode === THEME_MODES.LIGHT ? colors.primary : theme.textMuted}
+                    />
+                    <Text style={[
+                        styles.themeOptionText,
+                        { color: themeMode === THEME_MODES.LIGHT ? colors.primary : theme.text }
+                    ]}>
+                        Sáng
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[
+                        styles.themeOption,
+                        themeMode === THEME_MODES.DARK && styles.themeOptionActive,
+                        themeMode === THEME_MODES.DARK && { borderColor: colors.primary }
+                    ]}
+                    onPress={() => setTheme(THEME_MODES.DARK)}
+                >
+                    <Icon
+                        name="moon-outline"
+                        size={24}
+                        color={themeMode === THEME_MODES.DARK ? colors.primary : theme.textMuted}
+                    />
+                    <Text style={[
+                        styles.themeOptionText,
+                        { color: themeMode === THEME_MODES.DARK ? colors.primary : theme.text }
+                    ]}>
+                        Tối
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
             {/* App Info */}
             <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
                 ỨNG DỤNG
@@ -415,5 +485,29 @@ const styles = StyleSheet.create({
     },
     logoutText: {
         ...typography.button,
+    },
+    themeCard: {
+        flexDirection: 'row',
+        padding: spacing.md,
+        borderRadius: spacing.borderRadius.lg,
+        marginBottom: spacing.md,
+        gap: spacing.sm,
+        ...globalStyles.shadowSmall,
+    },
+    themeOption: {
+        flex: 1,
+        alignItems: 'center',
+        padding: spacing.md,
+        borderRadius: spacing.borderRadius.md,
+        borderWidth: 2,
+        borderColor: 'transparent',
+    },
+    themeOptionActive: {
+        backgroundColor: colors.primary + '10',
+    },
+    themeOptionText: {
+        ...typography.caption,
+        marginTop: spacing.xs,
+        fontWeight: '600',
     },
 });

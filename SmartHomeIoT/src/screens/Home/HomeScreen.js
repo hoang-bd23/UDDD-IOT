@@ -11,15 +11,16 @@ import {
     ScrollView,
     TouchableOpacity,
     RefreshControl,
-    useColorScheme,
+    Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useDevices } from '../../context/DeviceContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { colors, spacing, typography, getThemeColors, globalStyles } from '../../styles';
 
 export default function HomeScreen({ navigation }) {
-    const isDarkMode = useColorScheme() === 'dark';
+    const { isDarkMode } = useTheme();
     const theme = getThemeColors(isDarkMode);
 
     const { user } = useAuth();
@@ -69,8 +70,7 @@ export default function HomeScreen({ navigation }) {
     const handleDeviceToggle = async (deviceId) => {
         const result = await toggleDevice(deviceId);
         if (!result.success) {
-            // Could show an alert here
-            console.log('Toggle failed:', result.error);
+            Alert.alert('Lỗi', result.error || 'Không thể điều khiển thiết bị');
         }
     };
 

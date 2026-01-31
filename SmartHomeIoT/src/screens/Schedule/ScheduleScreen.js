@@ -1,143 +1,226 @@
 /**
  * Schedule Screen
- * Manage automation schedules
+ * Display and manage LED schedules
  */
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     FlatList,
     TouchableOpacity,
-    Switch,
-    useColorScheme,
+    RefreshControl,
     Alert,
+    Switch,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useSchedules } from '../../context/ScheduleContext';
-import { useDevices } from '../../context/DeviceContext';
+import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { firebaseDatabase } from '../../services/firebase';
 import { colors, spacing, typography, getThemeColors, globalStyles } from '../../styles';
 
-export default function ScheduleScreen() {
-    const isDarkMode = useColorScheme() === 'dark';
+export default function ScheduleScreen({ navigation }) {
+    const { isDarkMode } = useTheme();
     const theme = getThemeColors(isDarkMode);
 
-    const { schedules, toggleSchedule, removeSchedule } = useSchedules();
-    const { devices } = useDevices();
+    const { isAuthenticated } = useAuth();
 
-    const getDeviceName = (deviceId) => {
-        const device = devices.find(d => d.id === deviceId);
-        return device?.name || 'Thiết bị không xác định';
+    const [schedules, setSchedules] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Load schedules from Firebase
+    const loadSchedules = useCallback(async () => {
+        if (!isAuthenticated) {
+            setSchedules([]);
+            setIsLoading(false);
+            setIsRefreshing(false);
+            return;
+        }
+
+        try {
+            const data = await firebaseDatabase.getSchedules();
+            setSchedules(data || []);
+        } catch (error) {
+            console.warn('Error loading schedules:', error);
+        } finally {
+            setIsLoading(false);
+            setIsRefreshing(false);
+        }
+    }, [isAuthenticated]);
+
+    useEffect(() => {
+        loadSchedules();
+    }, [loadSchedules]);
+
+    // Refresh when screen is focused
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', () => {
+            loadSchedules();
+        });
+        return unsubscribe;
+    }, [navigation, loadSchedules]);
+
+    const onRefresh = useCallback(() => {
+        setIsRefreshing(true);
+        loadSchedules();
+    }, [loadSchedules]);
+
+    // Toggle schedule enabled/disabled
+    const toggleSchedule = async (scheduleId, currentEnabled) => {
+        try {
+            await firebaseDatabase.updateSchedule(scheduleId, {
+                enabled: !currentEnabled,
+            });
+            // Update local state
+            setSchedules(prev =>
+                prev.map(s =>
+                    s.id === scheduleId ? { ...s, enabled: !currentEnabled } : s
+                )
+            );
+        } catch (error) {
+            Alert.alert('Lỗi', 'Không thể cập nhật lịch hẹn');
+        }
     };
 
-    const formatTime = (time) => {
-        if (!time) return '--:--';
-        return time;
-    };
-
-    const formatDays = (days) => {
-        if (!days || days.length === 0) return 'Một lần';
-        if (days.length === 7) return 'Hàng ngày';
-
-        const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-        return days.map(d => dayNames[d]).join(', ');
-    };
-
-    const handleDelete = (scheduleId) => {
+    // Delete schedule
+    const deleteSchedule = (scheduleId) => {
         Alert.alert(
-            'Xóa lịch hẹn',
+            'Xác nhận xóa',
             'Bạn có chắc muốn xóa lịch hẹn này?',
             [
                 { text: 'Hủy', style: 'cancel' },
-                { text: 'Xóa', style: 'destructive', onPress: () => removeSchedule(scheduleId) },
+                {
+                    text: 'Xóa',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await firebaseDatabase.deleteSchedule(scheduleId);
+                            setSchedules(prev => prev.filter(s => s.id !== scheduleId));
+                        } catch (error) {
+                            Alert.alert('Lỗi', 'Không thể xóa lịch hẹn');
+                        }
+                    },
+                },
             ]
         );
     };
 
-    const renderSchedule = ({ item }) => (
-        <View style={[styles.scheduleCard, { backgroundColor: theme.surface }]}>
-            <View style={styles.scheduleHeader}>
-                <View style={styles.scheduleTimeContainer}>
-                    <Text style={[styles.scheduleTime, { color: theme.text }]}>
-                        {formatTime(item.time)}
-                    </Text>
-                    <View style={styles.actionBadge}>
-                        <Icon
-                            name={item.action === 'on' ? 'power' : 'power-outline'}
-                            size={12}
-                            color={item.action === 'on' ? colors.success : colors.error}
-                        />
-                        <Text
-                            style={[
-                                styles.actionText,
-                                { color: item.action === 'on' ? colors.success : colors.error }
-                            ]}
-                        >
-                            {item.action === 'on' ? 'BẬT' : 'TẮT'}
+    // Format repeat days
+    const formatRepeatDays = (repeat) => {
+        if (!repeat || repeat.length === 0) return 'Một lần';
+        if (repeat.length === 7) return 'Hàng ngày';
+
+        const dayMap = {
+            'Mon': 'T2',
+            'Tue': 'T3',
+            'Wed': 'T4',
+            'Thu': 'T5',
+            'Fri': 'T6',
+            'Sat': 'T7',
+            'Sun': 'CN',
+        };
+
+        return repeat.map(d => dayMap[d] || d).join(', ');
+    };
+
+    // Render each schedule item
+    const renderItem = ({ item }) => {
+        const isOn = item.action === 'ON';
+
+        return (
+            <View style={[styles.scheduleItem, { backgroundColor: theme.surface }]}>
+                <TouchableOpacity
+                    style={styles.scheduleContent}
+                    onPress={() => navigation.navigate('AddSchedule', { schedule: item })}
+                    activeOpacity={0.7}
+                >
+                    <View style={[
+                        styles.actionIndicator,
+                        { backgroundColor: isOn ? colors.success : colors.error }
+                    ]} />
+
+                    <View style={styles.timeContainer}>
+                        <Text style={[styles.time, { color: theme.text }]}>
+                            {item.time}
                         </Text>
+                        <View style={styles.detailsRow}>
+                            <View style={[
+                                styles.actionBadge,
+                                { backgroundColor: isOn ? colors.success + '20' : colors.error + '20' }
+                            ]}>
+                                <Text style={[
+                                    styles.actionText,
+                                    { color: isOn ? colors.success : colors.error }
+                                ]}>
+                                    {isOn ? 'BẬT' : 'TẮT'}
+                                </Text>
+                            </View>
+                            <Text style={[styles.repeatText, { color: theme.textMuted }]}>
+                                {formatRepeatDays(item.repeat)}
+                            </Text>
+                        </View>
                     </View>
-                </View>
+                </TouchableOpacity>
 
-                <Switch
-                    value={item.isEnabled}
-                    onValueChange={() => toggleSchedule(item.id)}
-                    trackColor={{ false: theme.surfaceSecondary, true: colors.primary + '50' }}
-                    thumbColor={item.isEnabled ? colors.primary : theme.textMuted}
-                />
-            </View>
-
-            <View style={styles.scheduleBody}>
-                <View style={styles.scheduleInfo}>
-                    <Icon name="bulb-outline" size={16} color={theme.textSecondary} />
-                    <Text style={[styles.deviceName, { color: theme.text }]}>
-                        {getDeviceName(item.deviceId)}
-                    </Text>
-                </View>
-
-                <View style={styles.scheduleInfo}>
-                    <Icon name="calendar-outline" size={16} color={theme.textSecondary} />
-                    <Text style={[styles.repeatText, { color: theme.textSecondary }]}>
-                        {formatDays(item.repeatDays)}
-                    </Text>
+                <View style={styles.actionsContainer}>
+                    <Switch
+                        value={item.enabled}
+                        onValueChange={() => toggleSchedule(item.id, item.enabled)}
+                        trackColor={{ false: theme.surfaceSecondary, true: colors.primary + '50' }}
+                        thumbColor={item.enabled ? colors.primary : theme.textMuted}
+                    />
+                    <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() => deleteSchedule(item.id)}
+                    >
+                        <Icon name="trash-outline" size={20} color={colors.error} />
+                    </TouchableOpacity>
                 </View>
             </View>
+        );
+    };
 
-            <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleDelete(item.id)}
-            >
-                <Icon name="trash-outline" size={20} color={colors.error} />
-            </TouchableOpacity>
+    // Empty state
+    const renderEmpty = () => (
+        <View style={styles.emptyContainer}>
+            <Icon name="alarm-outline" size={64} color={theme.textMuted} />
+            <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                Chưa có lịch hẹn
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>
+                Nhấn nút + để tạo lịch bật/tắt đèn tự động
+            </Text>
         </View>
     );
 
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>
-            {schedules.length > 0 ? (
-                <FlatList
-                    data={schedules}
-                    renderItem={renderSchedule}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.listContent}
-                    showsVerticalScrollIndicator={false}
-                />
-            ) : (
-                <View style={styles.emptyState}>
-                    <Icon name="time-outline" size={64} color={theme.textMuted} />
-                    <Text style={[styles.emptyTitle, { color: theme.text }]}>
-                        Chưa có lịch hẹn
-                    </Text>
-                    <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-                        Tạo lịch hẹn để tự động hóa thiết bị
-                    </Text>
-                </View>
-            )}
+            <FlatList
+                data={schedules}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={[
+                    styles.listContent,
+                    schedules.length === 0 && styles.emptyList
+                ]}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={isRefreshing}
+                        onRefresh={onRefresh}
+                        colors={[colors.primary]}
+                    />
+                }
+                ListEmptyComponent={!isLoading && renderEmpty}
+                showsVerticalScrollIndicator={false}
+            />
 
-            {/* Add Schedule FAB */}
+            {/* FAB to add new schedule */}
             <TouchableOpacity
-                style={styles.fab}
-                onPress={() => Alert.alert('Thêm lịch hẹn', 'Tính năng đang phát triển')}
+                style={[styles.fab, { backgroundColor: colors.primary }]}
+                onPress={() => navigation.navigate('AddSchedule')}
+                activeOpacity={0.8}
             >
                 <Icon name="add" size={28} color={colors.white} />
             </TouchableOpacity>
@@ -150,65 +233,69 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     listContent: {
-        padding: spacing.screenPadding,
+        padding: spacing.md,
         paddingBottom: 100,
     },
-    scheduleCard: {
-        padding: spacing.lg,
+    emptyList: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    scheduleItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
         borderRadius: spacing.borderRadius.lg,
         marginBottom: spacing.md,
+        overflow: 'hidden',
         ...globalStyles.shadowSmall,
     },
-    scheduleHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: spacing.md,
+    actionIndicator: {
+        width: 4,
+        height: '100%',
+        position: 'absolute',
+        left: 0,
     },
-    scheduleTimeContainer: {
+    scheduleContent: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
+        padding: spacing.lg,
+        paddingLeft: spacing.lg + 4,
     },
-    scheduleTime: {
-        ...typography.h3,
-        marginRight: spacing.md,
+    timeContainer: {
+        flex: 1,
+    },
+    time: {
+        ...typography.h2,
+        fontWeight: '600',
+    },
+    detailsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: spacing.xs,
     },
     actionBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
         paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
+        paddingVertical: 2,
         borderRadius: spacing.borderRadius.sm,
-        backgroundColor: 'rgba(0,0,0,0.05)',
+        marginRight: spacing.sm,
     },
     actionText: {
         ...typography.caption,
-        fontWeight: '600',
-        marginLeft: spacing.xs,
-    },
-    scheduleBody: {
-        gap: spacing.sm,
-    },
-    scheduleInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.sm,
-    },
-    deviceName: {
-        ...typography.body,
+        fontWeight: '700',
     },
     repeatText: {
-        ...typography.bodySmall,
+        ...typography.caption,
+    },
+    actionsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingRight: spacing.md,
+        gap: spacing.sm,
     },
     deleteButton: {
-        position: 'absolute',
-        top: spacing.lg,
-        right: spacing.lg,
         padding: spacing.sm,
     },
-    emptyState: {
-        flex: 1,
-        justifyContent: 'center',
+    emptyContainer: {
         alignItems: 'center',
         padding: spacing.xxl,
     },
@@ -217,18 +304,17 @@ const styles = StyleSheet.create({
         marginTop: spacing.lg,
         marginBottom: spacing.sm,
     },
-    emptyText: {
+    emptySubtitle: {
         ...typography.body,
         textAlign: 'center',
     },
     fab: {
         position: 'absolute',
-        bottom: spacing.xl,
-        right: spacing.xl,
+        right: spacing.lg,
+        bottom: spacing.lg,
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
         ...globalStyles.shadowMedium,
