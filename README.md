@@ -2,7 +2,7 @@
 
 Điều khiển thiết bị thông minh qua Raspberry Pi
 
-## 📱 Tổng quan
+##  Tổng quan
 
 SmartHome IoT là ứng dụng React Native cho phép điều khiển các thiết bị điện tử trong nhà thông qua Raspberry Pi. Ứng dụng hỗ trợ:
 
@@ -17,7 +17,7 @@ SmartHome IoT là ứng dụng React Native cho phép điều khiển các thi�
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Component | Technology |
 |-----------|------------|
@@ -33,7 +33,7 @@ SmartHome IoT là ứng dụng React Native cho phép điều khiển các thi�
 
 ---
 
-## 📋 Yêu cầu hệ thống
+##  Yêu cầu hệ thống
 
 ### Máy tính phát triển
 - **Node.js** 18+ (LTS khuyến nghị)
@@ -94,7 +94,7 @@ SmartHomeIoT/
 
 ---
 
-## 🚀 Hướng dẫn cài đặt
+##  Hướng dẫn cài đặt
 
 ### Bước 1: Clone repository
 
@@ -361,7 +361,7 @@ set JAVA_HOME=C:\Program Files\Java\jdk-17
 
 ---
 
-## 🔧 Troubleshooting
+##  Troubleshooting
 
 ### App không kết nối được với Raspberry Pi
 
@@ -388,7 +388,7 @@ set JAVA_HOME=C:\Program Files\Java\jdk-17
 
 ---
 
-## 🏠 Chạy tự động khi Pi khởi động
+##  Chạy tự động khi Pi khởi động
 
 ### Tạo systemd service cho LED Server
 
@@ -420,7 +420,7 @@ sudo systemctl start led-server
 
 ---
 
-## 📸 Screenshots
+##  Screenshots
 
 | Trang chủ | Thiết bị | Lịch hẹn | Cài đặt |
 |-----------|----------|----------|---------|
@@ -428,7 +428,7 @@ sudo systemctl start led-server
 
 ---
 
-## 🧪 Testing
+##  Testing
 
 ```bash
 # Chạy tests
@@ -450,12 +450,4 @@ npm run typecheck
 - ✅ Mỗi developer tự tạo Firebase project riêng
 - ✅ Sử dụng Database Rules để bảo vệ dữ liệu
 
----
 
-## 👤 Author
-
-SmartHome IoT Team
-
-## 📝 License
-
-MIT License - Free to use for educational purposes.
